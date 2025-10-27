@@ -8,35 +8,28 @@ const CHANNEL_ID = process.env.CHANNEL_ID;
 const TIMEZONE = 'America/Chicago';
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
 let lastTimeString = '';
 
-client.once('ready', () => {
+client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}`);
-
-    // Immediate update on startup
-    updateTimeChannel();
-
-    // Schedule the next update at the start of the next minute
-    scheduleNextMinuteUpdate();
+    scheduleNextUpdate(); // Start the update cycle
 });
 
-function scheduleNextMinuteUpdate() {
+async function scheduleNextUpdate() {
+    await updateTimeChannel(); // Do the update now
+
+    // Calculate how long until the next full minute
     const now = DateTime.utc().setZone(TIMEZONE);
     const msUntilNextMinute = (60 - now.second) * 1000 - now.millisecond;
 
-    setTimeout(() => {
-        updateTimeChannel();
-        setInterval(updateTimeChannel, 60 * 1000); // every full minute
-    }, msUntilNextMinute);
+    setTimeout(scheduleNextUpdate, msUntilNextMinute);
 }
 
 async function updateTimeChannel() {
     const now = DateTime.utc().setZone(TIMEZONE);
     const timeString = now.toFormat('hh:mm a');
 
-    // Only update if the time string has changed
-    if (timeString === lastTimeString) return;
+    if (timeString === lastTimeString) return; // No need to update
     lastTimeString = timeString;
 
     try {
