@@ -9,13 +9,29 @@ const TIMEZONE = 'America/Chicago';
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
+let lastTimeString = '';
+
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
-    updateTimeChannel();
-    setInterval(updateTimeChannel, 10 * 1000); // every 10 seconds
+
+    // Calculate delay until the start of the next minute
+    const now = DateTime.utc().setZone(TIMEZONE);
+    const msUntilNextMinute = (60 - now.second) * 1000 - now.millisecond;
+
+    setTimeout(() => {
+        updateTimeChannel(); // initial update
+        setInterval(updateTimeChannel, 60 * 1000); // every full minute
+    }, msUntilNextMinute);
 });
 
 async function updateTimeChannel() {
+    const now = DateTime.utc().setZone(TIMEZONE);
+    const timeString = now.toFormat('hh:mm a'); // e.g., 08:15 AM
+
+    // Only update if the time string has changed
+    if (timeString === lastTimeString) return;
+    lastTimeString = timeString;
+
     let guild;
     try {
         guild = await client.guilds.fetch(GUILD_ID);
@@ -29,9 +45,6 @@ async function updateTimeChannel() {
     } catch {
         return console.log('Channel not found.');
     }
-
-    const now = DateTime.now().setZone(TIMEZONE);
-    const timeString = now.toFormat('hh:mm a'); // e.g., 07:00 AM
 
     try {
         await channel.setName(`⏱ ${timeString}`);
