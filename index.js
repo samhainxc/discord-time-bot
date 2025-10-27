@@ -14,39 +14,34 @@ let lastTimeString = '';
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
 
-    // Calculate delay until the start of the next minute
+    // Immediate update on startup
+    updateTimeChannel();
+
+    // Schedule the next update at the start of the next minute
+    scheduleNextMinuteUpdate();
+});
+
+function scheduleNextMinuteUpdate() {
     const now = DateTime.utc().setZone(TIMEZONE);
     const msUntilNextMinute = (60 - now.second) * 1000 - now.millisecond;
 
     setTimeout(() => {
-        updateTimeChannel(); // initial update
+        updateTimeChannel();
         setInterval(updateTimeChannel, 60 * 1000); // every full minute
     }, msUntilNextMinute);
-});
+}
 
 async function updateTimeChannel() {
     const now = DateTime.utc().setZone(TIMEZONE);
-    const timeString = now.toFormat('hh:mm a'); // e.g., 08:15 AM
+    const timeString = now.toFormat('hh:mm a');
 
     // Only update if the time string has changed
     if (timeString === lastTimeString) return;
     lastTimeString = timeString;
 
-    let guild;
     try {
-        guild = await client.guilds.fetch(GUILD_ID);
-    } catch {
-        return console.log('Guild not found.');
-    }
-
-    let channel;
-    try {
-        channel = await guild.channels.fetch(CHANNEL_ID);
-    } catch {
-        return console.log('Channel not found.');
-    }
-
-    try {
+        const guild = await client.guilds.fetch(GUILD_ID);
+        const channel = await guild.channels.fetch(CHANNEL_ID);
         await channel.setName(`⏱ ${timeString}`);
         console.log(`Updated channel to ${timeString}`);
     } catch (err) {
